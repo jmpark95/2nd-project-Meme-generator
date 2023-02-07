@@ -29,21 +29,17 @@ const Image = styled.img`
    max-height: 100%;
 `;
 
-// {
-//    "id": "181913649",
-//    "name": "Drake Hotline Bling",
-//    "url": "https://i.imgflip.com/30b1gx.jpg",
-//    "width": 1200,
-//    "height": 1200,
-//    "box_count": 2,
-//    "captions": 0
-//    },
-
 function App() {
    const [meme, setMeme] = useState({
+      template_id: null,
       image: null,
       boxCount: null,
    });
+
+   const [userInput, setUserInput] = useState([
+      { text: "test" },
+      { text: "test" },
+   ]);
 
    useEffect(() => {
       fetch("https://api.imgflip.com/get_memes")
@@ -52,22 +48,16 @@ function App() {
             const randomNumber = Math.floor(
                Math.random() * memeData.data.memes.length
             );
+            const currentMeme = memeData.data.memes[randomNumber];
+
             setMeme({
                ...meme,
-               image: memeData.data.memes[randomNumber].url,
-               boxCount: memeData.data.memes[randomNumber].box_count,
+               image: currentMeme.url,
+               boxCount: currentMeme.box_count,
+               template_id: currentMeme.id,
             });
          });
    }, []);
-
-   // const inputFields = meme..map((item, index) => (
-   //    <input
-   //       key={index}
-   //       id={index}
-   //       text={item.text}
-   //       placeholder={`Text${index + 1}`}
-   //    />
-   // ));
 
    let inputFields = [];
    for (let i = 0; i < meme.boxCount; i++) {
@@ -77,21 +67,31 @@ function App() {
    function handleSubmit(e) {
       e.preventDefault();
 
+      const params = new URLSearchParams();
+      params.append("template_id", meme.template_id);
+      params.append("username", "jmpark95");
+      params.append("password", "testpasswordforapi"); //unable to use process.env.REACT_APP for some reason?? https://create-react-app.dev/docs/adding-custom-environment-variables/
+      for (let i = 0; i < meme.boxCount; i++) {
+         params.append(`boxes[${i}][text]`, userInput[i]["text"]);
+      }
+
       fetch("https://api.imgflip.com/caption_image", {
          method: "POST",
          header: {
             "Content-Type": "application/x-www-form-urlencoded;",
          },
-         body: new URLSearchParams({
-            template_id: "87743020",
-            username: "jmpark95",
-            password: "testpasswordforapi", //unable to use process.env.REACT_APP for some reason?? https://create-react-app.dev/docs/adding-custom-environment-variables/
-            "boxes[0][text]": "test",
-            "boxes[1][text]": "asdf",
-         }),
+         body: new URLSearchParams(params),
       })
          .then((res) => res.json())
-         .then((data) => console.log(data));
+         .then((data) =>
+            setMeme({
+               ...meme,
+               image: data.data.url,
+            })
+         )
+         .catch((err) => {
+            console.error("Error:", err);
+         });
    }
 
    return (
