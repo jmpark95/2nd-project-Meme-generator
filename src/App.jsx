@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
-import Input from "./components/Input";
-import { nanoid } from "nanoid";
 
 const AppContainer = styled.div`
    width: 90%;
@@ -29,17 +27,15 @@ const Image = styled.img`
    max-height: 100%;
 `;
 
+const Form = styled.form``;
+
 function App() {
    const [meme, setMeme] = useState({
       template_id: null,
       image: null,
       boxCount: null,
    });
-
-   const [userInput, setUserInput] = useState([
-      { text: "test" },
-      { text: "test" },
-   ]);
+   const [userInput, setUserInput] = useState({});
 
    useEffect(() => {
       fetch("https://api.imgflip.com/get_memes")
@@ -59,39 +55,74 @@ function App() {
          });
    }, []);
 
-   let inputFields = [];
-   for (let i = 0; i < meme.boxCount; i++) {
-      inputFields.push(<Input key={i} placeholder={`Text${i + 1}`} />);
+   function handleSubmit(e) {
+      if (userInput) {
+         e.preventDefault();
+
+         const params = new URLSearchParams();
+         params.append("template_id", meme.template_id);
+         params.append("username", "jmpark95");
+         params.append("password", "testpasswordforapi"); //unable to use process.env.REACT_APP for some reason?? https://create-react-app.dev/docs/adding-custom-environment-variables/
+         for (let i = 0; i < meme.boxCount; i++) {
+            params.append(`boxes[${i}][text]`, userInput[`text${i}`]);
+         }
+
+         fetch("https://api.imgflip.com/caption_image", {
+            method: "POST",
+            header: {
+               "Content-Type": "application/x-www-form-urlencoded;",
+            },
+            body: new URLSearchParams(params),
+         })
+            .then((res) => res.json())
+            .then((data) =>
+               setMeme({
+                  ...meme,
+                  image: data.data.url,
+               })
+            )
+            .catch((err) => {
+               console.error("Error:", err);
+            });
+      }
    }
 
-   function handleSubmit(e) {
-      e.preventDefault();
+   function handleChange(e) {
+      setUserInput({ ...userInput, [e.target.name]: e.target.value });
+   }
 
-      const params = new URLSearchParams();
-      params.append("template_id", meme.template_id);
-      params.append("username", "jmpark95");
-      params.append("password", "testpasswordforapi"); //unable to use process.env.REACT_APP for some reason?? https://create-react-app.dev/docs/adding-custom-environment-variables/
-      for (let i = 0; i < meme.boxCount; i++) {
-         params.append(`boxes[${i}][text]`, userInput[i]["text"]);
-      }
-
-      fetch("https://api.imgflip.com/caption_image", {
-         method: "POST",
-         header: {
-            "Content-Type": "application/x-www-form-urlencoded;",
-         },
-         body: new URLSearchParams(params),
-      })
+   function handleRefresh() {
+      fetch("https://api.imgflip.com/get_memes")
          .then((res) => res.json())
-         .then((data) =>
+         .then((memeData) => {
+            const randomNumber = Math.floor(
+               Math.random() * memeData.data.memes.length
+            );
+            const currentMeme = memeData.data.memes[randomNumber];
+
             setMeme({
                ...meme,
-               image: data.data.url,
-            })
-         )
-         .catch((err) => {
-            console.error("Error:", err);
+               image: currentMeme.url,
+               boxCount: currentMeme.box_count,
+               template_id: currentMeme.id,
+            });
          });
+      setUserInput({});
+      inputFields = [];
+   }
+
+   let inputFields = [];
+   for (let i = 0; i < meme.boxCount; i++) {
+      inputFields.push(
+         <input
+            type="text"
+            name={`text${i}`}
+            key={i}
+            placeholder={`Text${i + 1}`}
+            value={userInput[`text${i}`]}
+            onChange={handleChange}
+         />
+      );
    }
 
    return (
@@ -105,13 +136,13 @@ function App() {
             </div>
 
             <div>
-               <form onSubmit={handleSubmit}>
+               <Form onSubmit={handleSubmit}>
                   {inputFields}
                   <button>Create your meme</button>
-               </form>
+               </Form>
             </div>
 
-            <button>Generate new random meme</button>
+            <button onClick={handleRefresh}>Generate new random meme</button>
          </main>
       </AppContainer>
    );
