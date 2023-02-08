@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
+import { small, medium, large } from "./responsive";
 
 const AppContainer = styled.div`
    width: 90%;
@@ -13,12 +14,17 @@ const Header = styled.header`
    font-weight: 600;
 `;
 
+const Main = styled.main``;
+
+const ImageSection = styled.div`
+   margin-bottom: 1rem;
+`;
+
 const ImageWrapper = styled.div`
    display: flex;
    justify-content: center;
    align-items: center;
    height: 30vh;
-   border: 1px solid;
 `;
 
 const Image = styled.img`
@@ -27,17 +33,48 @@ const Image = styled.img`
    max-height: 100%;
 `;
 
-const Form = styled.form``;
+const Form = styled.form`
+   display: flex;
+   flex-direction: column;
+   justify-content: space-around;
+   width: 60%;
+   height: 100%;
+   margin: auto;
+   ${small({ width: "50%" })}
+   ${medium({ width: "30%" })}
+   ${large({ width: "20%" })}
+`;
+
+const FormSection = styled.div`
+   margin-bottom: 1rem;
+`;
+
+const Input = styled.input`
+   padding: 0.3rem 0.5rem;
+`;
+
+const Button = styled.button`
+   background: lightgray;
+   border: 1px solid;
+   border-radius: 0.2rem;
+   padding: 0.5rem 0.5rem;
+   cursor: pointer;
+   width: 100%;
+   margin-bottom: 1rem;
+`;
 
 function App() {
    const [meme, setMeme] = useState({
       template_id: null,
       image: null,
-      boxCount: null,
    });
    const [userInput, setUserInput] = useState({});
 
    useEffect(() => {
+      fetchMemesAndUpdateState();
+   }, []);
+
+   function fetchMemesAndUpdateState() {
       fetch("https://api.imgflip.com/get_memes")
          .then((res) => res.json())
          .then((memeData) => {
@@ -51,17 +88,16 @@ function App() {
             setMeme({
                ...meme,
                image: currentMeme.url,
-               boxCount: currentMemeBoxCount,
                template_id: currentMeme.id,
             });
 
-            let userInputInitialState = {};
+            let initialState = {};
             for (let i = 0; i < currentMemeBoxCount; i++) {
-               userInputInitialState[`text${i}`] = "";
+               initialState[`text${i}`] = "";
             }
-            setUserInput(userInputInitialState);
+            setUserInput(initialState);
          });
-   }, []);
+   }
 
    function handleSubmit(e) {
       if (userInput) {
@@ -71,7 +107,7 @@ function App() {
          params.append("template_id", meme.template_id);
          params.append("username", "jmpark95");
          params.append("password", "testpasswordforapi"); //unable to use process.env.REACT_APP for some reason?? https://create-react-app.dev/docs/adding-custom-environment-variables/
-         for (let i = 0; i < meme.boxCount; i++) {
+         for (let i = 0; i < Object.keys(userInput).length; i++) {
             params.append(`boxes[${i}][text]`, userInput[`text${i}`]);
          }
 
@@ -99,36 +135,22 @@ function App() {
       setUserInput({ ...userInput, [e.target.name]: e.target.value });
    }
 
-   function handleRefresh() {
-      fetch("https://api.imgflip.com/get_memes")
-         .then((res) => res.json())
-         .then((memeData) => {
-            const randomNumber = Math.floor(
-               Math.random() * memeData.data.memes.length
-            );
-            const currentMeme = memeData.data.memes[randomNumber];
-
-            setMeme({
-               ...meme,
-               image: currentMeme.url,
-               boxCount: currentMeme.box_count,
-               template_id: currentMeme.id,
-            });
-         });
-      setUserInput({});
-      inputFields = [];
+   function handleRefresh(e) {
+      e.preventDefault();
+      fetchMemesAndUpdateState();
    }
 
    let inputFields = [];
-   for (let i = 0; i < meme.boxCount; i++) {
+   for (let i = 0; i < Object.keys(userInput).length; i++) {
       inputFields.push(
-         <input
+         <Input
             type="text"
             name={`text${i}`}
             key={i}
             placeholder={`Text${i + 1}`}
             value={userInput[`text${i}`]}
             onChange={handleChange}
+            style={{ marginBottom: "1rem" }}
          />
       );
    }
@@ -136,22 +158,23 @@ function App() {
    return (
       <AppContainer>
          <Header>Random meme generator</Header>
-         <main>
-            <div>
+         <Main>
+            <ImageSection>
                <ImageWrapper>
-                  <Image src={meme.image} alt="" />
+                  <Image src={meme.image} alt="meme-image" />
                </ImageWrapper>
-            </div>
+            </ImageSection>
 
-            <div>
+            <FormSection>
                <Form onSubmit={handleSubmit}>
                   {inputFields}
-                  <button>Create your meme</button>
+                  <Button>Create your meme</Button>
+                  <Button type="refresh" onClick={handleRefresh}>
+                     Generate new random meme
+                  </Button>
                </Form>
-            </div>
-
-            <button onClick={handleRefresh}>Generate new random meme</button>
-         </main>
+            </FormSection>
+         </Main>
       </AppContainer>
    );
 }
