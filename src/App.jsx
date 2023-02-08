@@ -45,13 +45,21 @@ function App() {
                Math.random() * memeData.data.memes.length
             );
             const currentMeme = memeData.data.memes[randomNumber];
+            const currentMemeBoxCount =
+               memeData.data.memes[randomNumber].box_count;
 
             setMeme({
                ...meme,
                image: currentMeme.url,
-               boxCount: currentMeme.box_count,
+               boxCount: currentMemeBoxCount,
                template_id: currentMeme.id,
             });
+
+            let userInputInitialState = {};
+            for (let i = 0; i < currentMemeBoxCount; i++) {
+               userInputInitialState[`text${i}`] = "";
+            }
+            setUserInput(userInputInitialState);
          });
    }, []);
 
